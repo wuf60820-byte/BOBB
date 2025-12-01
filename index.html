@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>東京旅遊規劃 App - Firebase 協作版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* 定義主題顏色：櫻花粉 (Sakura Pink) */
+        :root {
+            --color-sakura-500: #f472b6; /* Primary Accent */
+            --color-sakura-100: #fce7f6; /* Light Background */
+            --color-sakura-700: #db2777; /* Dark Text/Hover */
+            --color-sakura-900: #9d174d; /* Deep Color */
+        }
+        .text-sakura { color: var(--color-sakura-500); }
+        .bg-sakura-100 { background-color: var(--color-sakura-100); }
+        .bg-sakura-500 { background-color: var(--color-sakura-500); }
+        .hover\:bg-sakura-700:hover { background-color: var(--color-sakura-700); }
+        .border-sakura-400 { border-color: var(--color-sakura-500); }
+        .focus\:ring-sakura-500:focus { --tw-ring-color: var(--color-sakura-500); }
+        .focus\:border-sakura-500:focus { border-color: var(--color-sakura-500); }
+
+        /* App 框架與手機化介面 */
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+            background-color: #f0f4f7; /* 外部背景色 */
+        }
+        #app {
+            max-width: 420px; /* 限制寬度模擬手機 */
+            margin: 0 auto;
+            min-height: 100vh;
+            background-color: white;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1); 
+            position: relative;
+            padding-bottom: 80px; 
+            border-radius: 20px; 
+            overflow: hidden;
+        }
+        .main-content {
+            padding: 1rem;
+        }
+        .nav-icon {
+            width: 20px;
+            height: 20px;
+        }
+        /* 底部導航列樣式 */
+        .tab-button {
+            transition: all 0.3s;
+            border-top: 3px solid transparent;
+        }
+        .tab-button.active {
+            color: var(--color-sakura-700);
+            border-top-color: var(--color-sakura-500);
+            transform: translateY(-5px);
+        }
+        /* 隱藏滾動條以獲得更乾淨的移動體驗 */
+        .horizontal-scroll {
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none; 
+        }
+        .horizontal-scroll::-webkit-scrollbar {
+            display: none; 
+        }
+        .day-pill {
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+        /* 時間軸線條 (僅用於視覺美觀) */
+        .timeline-line::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 20px; /* Adjust based on li padding */
+            width: 2px;
+            background-color: #e5e7eb;
+            z-index: 0;
+        }
+        .timeline-dot {
+            position: absolute;
+            left: 17px; /* Align with line */
+            top: 20px;
+            z-index: 1;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <header class="sticky top-0 bg-white p-4 shadow-sm z-10 border-b border-gray-100">
+        <h1 class="text-xl font-bold text-gray-800 text-center">
+            🌸 東京旅程 <span class="text-base font-normal text-sakura-500 ml-1">協作規劃</span>
+        </h1>
+        <div class="text-center text-xs mt-2 p-1 rounded-lg bg-gray-50 border border-gray-200">
+            <p v-if="!isAuthReady" class="text-orange-500">
+                <i data-lucide="loader-2" class="nav-icon w-3 h-3 inline-block mr-1 animate-spin"></i>
+                連線中...
+            </p>
+            <p v-else-if="userId" class="text-green-600">
+                <i data-lucide="users" class="nav-icon w-3 h-3 inline-block mr-1"></i>
+                協作 ID: <span class="font-mono text-xs select-all">{{ userId }}</span>
+            </p>
+            <p v-else class="text-red-500">
+                <i data-lucide="alert-triangle" class="nav-icon w-3 h-3 inline-block mr-1"></i>
+                連線失敗或匿名登入
+            </p>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div v-show="activeTab === 'itinerary'">
+            <h2 class="text-2xl font-semibold mb-4 text-gray-700">每日行程規劃</h2>
+            
+            <div class="horizontal-scroll flex space-x-3 pb-3 overflow-x-auto mb-6">
+                <button
+                    v-for="day in uniqueDays"
+                    :key="day"
+                    @click="selectedDay = day"
+                    class="day-pill px-5 py-2 text-sm font-semibold rounded-full border transition duration-150 shadow-md"
+                    :class="{'bg-sakura-500 text-white border-sakura-500': selectedDay === day, 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50': selectedDay !== day}"
+                >
+                    DAY {{ day }}
+                </button>
+                <button @click="selectedDay = null"
+                    class="day-pill px-5 py-2 text-sm font-semibold rounded-full border transition duration-150 text-gray-500 border-dashed border-gray-300 hover:bg-gray-50">
+                    <i data-lucide="list-filter" class="nav-icon w-4 h-4 inline-block mr-1"></i> 顯示全部
+                </button>
+            </div>
+
+            <div class="bg-sakura-100 p-4 rounded-xl shadow-inner mb-6 border border-sakura-500/30">
+                <h3 class="font-bold text-sakura-700 mb-3 flex items-center">
+                    <i data-lucide="map-pin" class="nav-icon w-5 h-5 mr-2"></i> 新增行程
+                </h3>
+                <div class="space-y-3">
+                    <div class="flex space-x-2">
+                        <input v-model.number="newEvent.day" type="number" min="1" placeholder="第幾天 (e.g. 1)" class="w-1/3 p-2 border rounded-lg focus:ring-sakura-500 focus:border-sakura-500 text-sm">
+                        <input v-model="newEvent.time" type="time" class="w-2/3 p-2 border rounded-lg focus:ring-sakura-500 focus:border-sakura-500 text-sm">
+                    </div>
+                    <input v-model="newEvent.location" type="text" placeholder="地點名稱 (e.g. 澀谷天空)" class="w-full p-2 border rounded-lg focus:ring-sakura-500 focus:border-sakura-500 text-sm">
+                    <textarea v-model="newEvent.details" placeholder="備註/細節" class="w-full p-2 border rounded-lg focus:ring-sakura-500 focus:border-sakura-500 h-16 text-sm"></textarea>
+                    <button @click="addEvent" class="w-full bg-sakura-500 text-white p-3 rounded-xl font-bold hover:bg-sakura-700 transition duration-150 shadow-md" :disabled="!isAuthReady">
+                        <i data-lucide="save" class="nav-icon w-4 h-4 inline-block mr-1"></i> 儲存行程 ({{ isAuthReady ? '已連線' : '連線中...' }})
+                    </button>
+                </div>
+            </div>
+
+            <div v-for="dayGroup in filteredItineraryGroups" :key="dayGroup.day" class="bg-white p-4 rounded-xl shadow-lg mb-6 border-t-4 border-sakura-400">
+                <h3 class="text-xl font-extrabold mb-6 text-sakura-900 flex items-center">
+                    DAY {{ dayGroup.day }}
+                </h3>
+                <ol class="space-y-6 relative timeline-line pl-8">
+                    <li v-for="event in dayGroup.events" :key="event.id" class="p-3 pr-0 rounded-lg border-b border-gray-100 flex justify-between items-start hover:bg-gray-50 transition duration-100 relative">
+                        <div class="timeline-dot h-4 w-4 rounded-full bg-sakura-500 border-2 border-white shadow-md"></div>
+                        
+                        <div class="flex-grow ml-2">
+                            <p class="text-base font-semibold text-gray-900">{{ event.location }}</p>
+                            <p class="text-xs text-gray-500 mt-1 flex items-center">
+                                <i data-lucide="clock" class="nav-icon w-3 h-3 mr-1"></i> {{ event.time }}
+                                <span class="ml-3 text-sakura-700 text-xs italic">
+                                    {{ getAuthorInitial(event.authorId) }}
+                                </span>
+                            </p>
+                            <p v-if="event.details" class="text-sm text-gray-600 mt-2 p-2 bg-white rounded-md border border-gray-200 shadow-inner">{{ event.details }}</p>
+                        </div>
+                        <button @click="deleteEvent(event.id)" class="ml-4 text-red-400 hover:text-red-600 p-1 rounded-full transition duration-150 flex-shrink-0">
+                            <i data-lucide="trash-2" class="nav-icon w-4 h-4"></i>
+                        </button>
+                    </li>
+                </ol>
+            </div>
+
+            <p v-if="itineraryEvents.length === 0" class="text-center text-gray-500 italic p-8">尚未新增任何行程</p>
+            <p class="text-center text-xs text-gray-400 mt-4 p-2 bg-yellow-50 rounded-lg border border-yellow-200">
+                <i data-lucide="alert-triangle" class="nav-icon w-3 h-3 inline-block mr-1"></i>
+                所有行程資料已啟用 **Firebase 協作功能**。
+            </p>
+        </div>
+
+        <div v-show="activeTab === 'expenses'">
+            <div class="space-y-6">
+                <h2 class="text-2xl font-semibold mb-4 text-gray-700">旅費分帳計算</h2>
+
+                <div class="bg-blue-50 p-4 rounded-xl shadow-inner border border-blue-500/30">
+                    <h3 class="font-bold text-blue-700 mb-2 flex items-center">
+                        <i data-lucide="trending-up" class="nav-icon w-5 h-5 mr-2"></i> 匯率換算
+                    </h3>
+                    <p class="text-sm text-blue-600">
+                        目前使用匯率： 1 JPY ≈ **{{ EXCHANGE_RATE_JPY_TWD }} TWD**
+                        <span class="text-xs text-gray-500 block mt-1">(此為預設匯率，實際金額請以當日銀行成交價為準)</span>
+                    </p>
+                </div>
+
+                <div class="bg-purple-50 p-4 rounded-xl shadow-inner border border-purple-500/30">
+                    <h3 class="font-bold text-purple-700 mb-2">旅伴名單 (用逗號分隔)</h3>
+                    <input v-model="memberInput" type="text" placeholder="e.g. Alice, Bob, Carol" class="w-full p-2 border rounded-lg focus:ring-purple-500 focus:border-purple-500 text-sm">
+                    <p class="text-xs text-purple-500 mt-2">目前成員: <span class="font-bold">{{ members.join(', ') }}</span></p>
+                </div>
+
+                <div class="bg-green-50 p-4 rounded-xl shadow-inner border border-green-500/30">
+                    <h3 class="font-bold text-green-700 mb-3 flex items-center">
+                        <i data-lucide="banknote" class="nav-icon w-5 h-5 mr-2"></i> 紀錄支出 (以外幣輸入)
+                    </h3>
+                    <div class="space-y-3">
+                        <input v-model="newExpense.description" type="text" placeholder="花費項目 (e.g. 晚餐)" class="w-full p-2 border rounded-lg focus:ring-green-500 focus:border-green-500 text-sm">
+                        
+                        <div class="flex items-center space-x-2">
+                            <select v-model="newExpense.currency" class="p-2 border rounded-lg bg-gray-100 text-sm">
+                                <option value="JPY">JPY (日圓)</option>
+                            </select>
+                            <input v-model.number="newExpense.amountForeign" type="number" min="0" placeholder="金額 (日圓)" class="w-full p-2 border rounded-lg focus:ring-green-500 focus:border-green-500 text-sm">
+                        </div>
+                        
+                        <p class="text-sm text-gray-700 bg-gray-100 p-2 rounded-lg border border-gray-300">
+                            換算為台幣 (TWD): **NT$ {{ calculatedAmountTWD.toLocaleString() }}**
+                        </p>
+
+                        <select v-model="newExpense.payer" class="w-full p-2 border rounded-lg focus:ring-green-500 focus:border-green-500 bg-white text-sm">
+                            <option value="" disabled>誰付的錢?</option>
+                            <option v-for="member in members" :key="member" :value="member">{{ member }}</option>
+                        </select>
+
+                        <div class="pt-1 text-sm">
+                            <label class="font-medium text-gray-700 block mb-1">參與分攤者:</label>
+                            <div class="flex flex-wrap gap-3">
+                                <div v-for="member in members" :key="'p-' + member" class="flex items-center space-x-1">
+                                    <input type="checkbox" :id="'part-' + member" :value="member" v-model="newExpense.participants" class="rounded text-green-600 focus:ring-green-500">
+                                    <label :for="'part-' + member" class="text-sm">{{ member }}</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button @click="addExpense" class="w-full bg-green-500 text-white p-3 rounded-xl font-bold hover:bg-green-700 transition duration-150 shadow-md" :disabled="!newExpense.payer || newExpense.amountForeign <= 0 || newExpense.participants.length === 0 || !isAuthReady">
+                            <i data-lucide="plus" class="nav-icon w-4 h-4 inline-block mr-1"></i> 紀錄支出
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl shadow-lg border-t-4 border-gray-300">
+                    <h3 class="text-xl font-extrabold mb-3 text-gray-800 flex items-center">
+                        <i data-lucide="receipt" class="nav-icon w-5 h-5 mr-2"></i> 支出紀錄 ({{ expenses.length }} 筆)
+                    </h3>
+                    <ul class="space-y-2">
+                        <li v-for="expense in expenses" :key="expense.id" class="p-3 bg-gray-50 rounded-lg border-l-4 border-gray-300 flex justify-between items-center">
+                            <div>
+                                <p class="font-semibold">{{ expense.description }}
+                                    <span class="ml-2 text-sakura-700 text-xs italic">
+                                        {{ getAuthorInitial(expense.authorId) }}
+                                    </span>
+                                </p>
+                                <p class="text-sm text-gray-500">
+                                    <span class="text-green-600 font-bold">{{ expense.payer }}</span> 支付了
+                                    <span class="font-bold text-gray-700">¥{{ expense.amountForeign.toLocaleString() }}</span>
+                                    <span class="text-xs text-gray-400"> (TWD {{ expense.amount.toLocaleString() }})</span>
+                                </p>
+                            </div>
+                            <button @click="deleteExpense(expense.id)" class="text-red-400 hover:text-red-600">
+                                <i data-lucide="x" class="nav-icon w-4 h-4"></i>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
+
+                <div class="bg-white p-4 rounded-xl shadow-lg border-t-4 border-green-400">
+                    <h3 class="text-xl font-extrabold mb-3 text-green-800 flex items-center">
+                        <i data-lucide="activity" class="nav-icon w-5 h-5 mr-2"></i> 結算結果 (以台幣 TWD 計算)
+                    </h3>
+
+                    <div v-if="settlements.length > 0" class="space-y-3">
+                        <div v-for="(settlement, index) in settlements" :key="index" class="p-3 bg-green-50 rounded-lg border-l-4 border-green-300">
+                            <p class="text-base font-semibold text-gray-800">
+                                <span class="text-red-600 font-bold">{{ settlement.from }}</span> 應支付
+                                <span class="text-blue-600 font-bold">{{ settlement.to }}</span>
+                                <span class="ml-2 text-xl text-green-700 font-extrabold">NT$ {{ settlement.amount.toLocaleString() }}</span>
+                            </p>
+                        </div>
+                    </div>
+                    <p v-else class="text-center text-gray-500 italic p-4 bg-gray-50 rounded-lg">請新增花費紀錄並確認旅伴名單。</p>
+                </div>
+            </div>
+        </div>
+
+        <div v-show="activeTab === 'map'">
+            <div class="space-y-6">
+                <h2 class="text-2xl font-semibold mb-4 text-gray-700">每日行程地圖與導航</h2>
+                
+                <p class="text-sm text-gray-600 p-3 rounded-xl bg-sakura-100 border border-sakura-300">
+                    <i data-lucide="map-pin" class="nav-icon w-4 h-4 inline-block mr-1 text-sakura-600"></i>
+                    地圖已自動釘選 **Day {{ selectedDay }}** 的所有地點 (共 {{ currentDayLocations.length }} 處)。
+                </p>
+
+                <div class="bg-white p-4 rounded-xl shadow-lg border-t-4 border-red-400">
+                    <h3 class="text-xl font-extrabold mb-3 text-red-800 flex items-center">
+                         <i data-lucide="map" class="nav-icon w-5 h-5 mr-2"></i> {{ currentDayLocations.join('、') || '東京' }} 地圖概覽
+                    </h3>
+                    
+                    <div class="w-full h-64 rounded-lg overflow-hidden border border-gray-300">
+                        <iframe
+                            :src="multiPointMapUrl"
+                            width="100%"
+                            height="100%"
+                            style="border:0;"
+                            allowfullscreen=""
+                            loading="lazy"
+                            referrerpolicy="no-referrer-when-downgrade">
+                        </iframe>
+                    </div>
+
+                    <div class="mt-3 p-2 bg-yellow-50 rounded-lg border border-yellow-200">
+                        <p class="text-sm text-gray-600 flex items-start">
+                            <i data-lucide="locate-fixed" class="nav-icon w-4 h-4 mr-2 flex-shrink-0 mt-0.5 text-red-500"></i>
+                            **定位提示：** 嵌入地圖無法顯示您的即時位置。請點擊下方按鈕，使用您手機/電腦的 Google 地圖 App 進行導航和定位。
+                        </p>
+                    </div>
+                </div>
+
+                <a :href="multiPointMapUrl" target="_blank"
+                    class="block w-full text-center bg-red-500 text-white p-4 rounded-xl font-bold hover:bg-red-600 transition duration-150 shadow-md">
+                    <i data-lucide="navigation" class="nav-icon inline-block mr-2"></i>
+                    開啟外部 Google 地圖導航 (多點)
+                </a>
+
+            </div>
+        </div>
+    </main>
+
+    <nav class="fixed bottom-0 left-0 right-0 max-w-420 mx-auto bg-white border-t border-gray-100 shadow-2xl z-20 rounded-t-xl">
+        <div class="flex justify-around items-center h-16">
+            <button @click="activeTab = 'itinerary'" class="flex flex-col items-center justify-center p-2 tab-button w-1/3" :class="{'active': activeTab === 'itinerary', 'text-gray-500': activeTab !== 'itinerary'}">
+                <i data-lucide="calendar-check" class="nav-icon"></i>
+                <span class="text-xs font-medium mt-1">行程表</span>
+            </button>
+            <button @click="activeTab = 'expenses'" class="flex flex-col items-center justify-center p-2 tab-button w-1/3" :class="{'active text-green-500': activeTab === 'expenses', 'text-gray-500': activeTab !== 'expenses'}">
+                <i data-lucide="wallet" class="nav-icon"></i>
+                <span class="text-xs font-medium mt-1">分帳</span>
+            </button>
+            <button @click="activeTab = 'map'" class="flex flex-col items-center justify-center p-2 tab-button w-1/3" :class="{'active text-red-500': activeTab === 'map', 'text-gray-500': activeTab !== 'map'}">
+                <i data-lucide="map" class="nav-icon"></i>
+                <span class="text-xs font-medium mt-1">地圖</span>
+            </button>
+        </div>
+    </nav>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+<script>
+    // ---!!! 請將這裡的 YOUR_... 替換成您在 Firebase 專案中取得的真實配置資訊 !!!---
+    // 這是您 Firebase 專案設定的物件
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    // 初始化 Firebase 應用程式，它將建立 firebase.auth 和 firebase.firestore 等全域變數
+    const app = firebase.initializeApp(firebaseConfig);
+    const db = app.firestore(); // 傳統寫法：直接從 app 取得 firestore 實例
+    const auth = app.auth();     // 傳統寫法：直接從 app 取得 auth 實例
+
+    // Vue 程式碼中使用的全域變數 (因為您的原始程式碼中使用了這些)
+    const appId = firebaseConfig.projectId; // 這裡使用 projectId 作為 appId 的替代
+    const initialAuthToken = null; 
+
+    // Vue 的響應式數據容器，用於儲存 Firestore 同步的資料
+    // 注意：這裡必須在 Vue 實例外部定義，因為 onSnapshot 需要在 Vue 之外啟動
+    const itineraryEvents = []; 
+    const expenses = [];
+    const userId = Vue.ref(null);
+    const isAuthReady = Vue.ref(false);
+
+    // 匯率常數
+    const EXCHANGE_RATE_JPY_TWD = 0.202;
+
+    async function initializeFirebase() {
+        try {
+            // 由於已在上方用傳統方式初始化，這裡主要是處理登入邏輯
+            
+            // 設置身份驗證狀態監聽 (傳統寫法)
+            auth.onAuthStateChanged((user) => {
+                if (user) {
+                    userId.
