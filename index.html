@@ -4,8 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>東京旅遊規劃 App - Firebase 協作版</title>
+    <!-- 引入 Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Vue 3 CDN -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- 引入 Lucide Icons (用於 App Icon) -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         /* 定義主題顏色：櫻花粉 (Sakura Pink) */
@@ -90,10 +93,12 @@
 <body>
 
 <div id="app">
+    <!-- Header/Title Bar -->
     <header class="sticky top-0 bg-white p-4 shadow-sm z-10 border-b border-gray-100">
         <h1 class="text-xl font-bold text-gray-800 text-center">
             🌸 東京旅程 <span class="text-base font-normal text-sakura-500 ml-1">協作規劃</span>
         </h1>
+        <!-- 連線狀態與協作 ID 顯示 -->
         <div class="text-center text-xs mt-2 p-1 rounded-lg bg-gray-50 border border-gray-200">
             <p v-if="!isAuthReady" class="text-orange-500">
                 <i data-lucide="loader-2" class="nav-icon w-3 h-3 inline-block mr-1 animate-spin"></i>
@@ -110,10 +115,13 @@
         </div>
     </header>
 
+    <!-- Main Content Area - Scrollable -->
     <main class="main-content">
+        <!-- 1. 每日行程表 (Itinerary) -->
         <div v-show="activeTab === 'itinerary'">
             <h2 class="text-2xl font-semibold mb-4 text-gray-700">每日行程規劃</h2>
             
+            <!-- Horizontal Day Picker -->
             <div class="horizontal-scroll flex space-x-3 pb-3 overflow-x-auto mb-6">
                 <button
                     v-for="day in uniqueDays"
@@ -130,6 +138,7 @@
                 </button>
             </div>
 
+            <!-- Add Event Form -->
             <div class="bg-sakura-100 p-4 rounded-xl shadow-inner mb-6 border border-sakura-500/30">
                 <h3 class="font-bold text-sakura-700 mb-3 flex items-center">
                     <i data-lucide="map-pin" class="nav-icon w-5 h-5 mr-2"></i> 新增行程
@@ -147,12 +156,14 @@
                 </div>
             </div>
 
+            <!-- Itinerary List (Time Line Style) -->
             <div v-for="dayGroup in filteredItineraryGroups" :key="dayGroup.day" class="bg-white p-4 rounded-xl shadow-lg mb-6 border-t-4 border-sakura-400">
                 <h3 class="text-xl font-extrabold mb-6 text-sakura-900 flex items-center">
                     DAY {{ dayGroup.day }}
                 </h3>
                 <ol class="space-y-6 relative timeline-line pl-8">
                     <li v-for="event in dayGroup.events" :key="event.id" class="p-3 pr-0 rounded-lg border-b border-gray-100 flex justify-between items-start hover:bg-gray-50 transition duration-100 relative">
+                        <!-- Timeline Dot -->
                         <div class="timeline-dot h-4 w-4 rounded-full bg-sakura-500 border-2 border-white shadow-md"></div>
                         
                         <div class="flex-grow ml-2">
@@ -179,10 +190,12 @@
             </p>
         </div>
 
+        <!-- 2. 分帳系統 (Expenses) -->
         <div v-show="activeTab === 'expenses'">
             <div class="space-y-6">
                 <h2 class="text-2xl font-semibold mb-4 text-gray-700">旅費分帳計算</h2>
 
+                <!-- Exchange Rate Info -->
                 <div class="bg-blue-50 p-4 rounded-xl shadow-inner border border-blue-500/30">
                     <h3 class="font-bold text-blue-700 mb-2 flex items-center">
                         <i data-lucide="trending-up" class="nav-icon w-5 h-5 mr-2"></i> 匯率換算
@@ -193,12 +206,14 @@
                     </p>
                 </div>
 
+                <!-- Members List -->
                 <div class="bg-purple-50 p-4 rounded-xl shadow-inner border border-purple-500/30">
                     <h3 class="font-bold text-purple-700 mb-2">旅伴名單 (用逗號分隔)</h3>
                     <input v-model="memberInput" type="text" placeholder="e.g. Alice, Bob, Carol" class="w-full p-2 border rounded-lg focus:ring-purple-500 focus:border-purple-500 text-sm">
                     <p class="text-xs text-purple-500 mt-2">目前成員: <span class="font-bold">{{ members.join(', ') }}</span></p>
                 </div>
 
+                <!-- Add Expense Form -->
                 <div class="bg-green-50 p-4 rounded-xl shadow-inner border border-green-500/30">
                     <h3 class="font-bold text-green-700 mb-3 flex items-center">
                         <i data-lucide="banknote" class="nav-icon w-5 h-5 mr-2"></i> 紀錄支出 (以外幣輸入)
@@ -206,6 +221,7 @@
                     <div class="space-y-3">
                         <input v-model="newExpense.description" type="text" placeholder="花費項目 (e.g. 晚餐)" class="w-full p-2 border rounded-lg focus:ring-green-500 focus:border-green-500 text-sm">
                         
+                        <!-- Foreign Currency Input -->
                         <div class="flex items-center space-x-2">
                             <select v-model="newExpense.currency" class="p-2 border rounded-lg bg-gray-100 text-sm">
                                 <option value="JPY">JPY (日圓)</option>
@@ -213,6 +229,7 @@
                             <input v-model.number="newExpense.amountForeign" type="number" min="0" placeholder="金額 (日圓)" class="w-full p-2 border rounded-lg focus:ring-green-500 focus:border-green-500 text-sm">
                         </div>
                         
+                        <!-- Calculated TWD Display -->
                         <p class="text-sm text-gray-700 bg-gray-100 p-2 rounded-lg border border-gray-300">
                             換算為台幣 (TWD): **NT$ {{ calculatedAmountTWD.toLocaleString() }}**
                         </p>
@@ -238,6 +255,7 @@
                     </div>
                 </div>
 
+                <!-- Expense List -->
                 <div class="bg-white p-4 rounded-xl shadow-lg border-t-4 border-gray-300">
                     <h3 class="text-xl font-extrabold mb-3 text-gray-800 flex items-center">
                         <i data-lucide="receipt" class="nav-icon w-5 h-5 mr-2"></i> 支出紀錄 ({{ expenses.length }} 筆)
@@ -264,6 +282,7 @@
                 </div>
 
 
+                <!-- Settlement Results -->
                 <div class="bg-white p-4 rounded-xl shadow-lg border-t-4 border-green-400">
                     <h3 class="text-xl font-extrabold mb-3 text-green-800 flex items-center">
                         <i data-lucide="activity" class="nav-icon w-5 h-5 mr-2"></i> 結算結果 (以台幣 TWD 計算)
@@ -283,6 +302,7 @@
             </div>
         </div>
 
+        <!-- 3. 地圖與導航 (Map) -->
         <div v-show="activeTab === 'map'">
             <div class="space-y-6">
                 <h2 class="text-2xl font-semibold mb-4 text-gray-700">每日行程地圖與導航</h2>
@@ -292,12 +312,14 @@
                     地圖已自動釘選 **Day {{ selectedDay }}** 的所有地點 (共 {{ currentDayLocations.length }} 處)。
                 </p>
 
+                <!-- Map Placeholder/Iframe -->
                 <div class="bg-white p-4 rounded-xl shadow-lg border-t-4 border-red-400">
                     <h3 class="text-xl font-extrabold mb-3 text-red-800 flex items-center">
                          <i data-lucide="map" class="nav-icon w-5 h-5 mr-2"></i> {{ currentDayLocations.join('、') || '東京' }} 地圖概覽
                     </h3>
                     
                     <div class="w-full h-64 rounded-lg overflow-hidden border border-gray-300">
+                        <!-- Google Maps Embed for Multiple Locations -->
                         <iframe
                             :src="multiPointMapUrl"
                             width="100%"
@@ -312,11 +334,12 @@
                     <div class="mt-3 p-2 bg-yellow-50 rounded-lg border border-yellow-200">
                         <p class="text-sm text-gray-600 flex items-start">
                             <i data-lucide="locate-fixed" class="nav-icon w-4 h-4 mr-2 flex-shrink-0 mt-0.5 text-red-500"></i>
-                            **定位提示：** 嵌入地圖無法顯示您的即時位置。請點擊下方按鈕，使用您手機/電腦的 Google 地圖 App 進行導航和定位。
+                            **定位提示：** 嵌入地圖無法顯示您的即時位置。請點擊下方按鈕，使用您手機/電腦的 Google 地圖 AppT 進行導航和定位。
                         </p>
                     </div>
                 </div>
 
+                <!-- Navigation Action Button -->
                 <a :href="multiPointMapUrl" target="_blank"
                     class="block w-full text-center bg-red-500 text-white p-4 rounded-xl font-bold hover:bg-red-600 transition duration-150 shadow-md">
                     <i data-lucide="navigation" class="nav-icon inline-block mr-2"></i>
@@ -327,6 +350,7 @@
         </div>
     </main>
 
+    <!-- Fixed Bottom Navigation - Clean, Minimalist Tab Bar -->
     <nav class="fixed bottom-0 left-0 right-0 max-w-420 mx-auto bg-white border-t border-gray-100 shadow-2xl z-20 rounded-t-xl">
         <div class="flex justify-around items-center h-16">
             <button @click="activeTab = 'itinerary'" class="flex flex-col items-center justify-center p-2 tab-button w-1/3" :class="{'active': activeTab === 'itinerary', 'text-gray-500': activeTab !== 'itinerary'}">
@@ -345,46 +369,429 @@
     </nav>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script type="module">
+    // Firebase 模組載入
+    import { initializeApp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, collection, onSnapshot, addDoc, deleteDoc, doc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    
+    const { createApp, ref, reactive, computed, watch, nextTick } = Vue
+    
+    // 匯率常數 (1 JPY to TWD - 模擬值)
+    const EXCHANGE_RATE_JPY_TWD = 0.202; 
 
-<script>
-    // ---!!! 請將這裡的 YOUR_... 替換成您在 Firebase 專案中取得的真實配置資訊 !!!---
-    // 這是您 Firebase 專案設定的物件
-    const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_AUTH_DOMAIN",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_STORAGE_BUCKET",
-      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-      appId: "YOUR_APP_ID"
+    // --- 步驟 2. 嵌入 Firebase 配置資訊 ---
+    const MY_FIREBASE_CONFIG = {
+        apiKey: "AIzaSy_YOUR_API_KEY_HERE",
+        authDomain: "your-project-name.firebaseapp.com",
+        projectId: "your-project-id-12345",
+        storageBucket: "your-project-name.appspot.com",
+        messagingSenderId: "1234567890",
+        appId: "1:1234567890:web:abcdefghijk"
     };
 
-    // 初始化 Firebase 應用程式，它將建立 firebase.auth 和 firebase.firestore 等全域變數
-    const app = firebase.initializeApp(firebaseConfig);
-    const db = app.firestore(); // 傳統寫法：直接從 app 取得 firestore 實例
-    const auth = app.auth();     // 傳統寫法：直接從 app 取得 auth 實例
+    // --- Firebase 全域初始化設定 ---
+    setLogLevel('error'); 
 
-    // Vue 程式碼中使用的全域變數 (因為您的原始程式碼中使用了這些)
-    const appId = firebaseConfig.projectId; // 這裡使用 projectId 作為 appId 的替代
-    const initialAuthToken = null; 
+    let db;
+    let auth;
+    let appId;
+    const userId = ref(null);
+    const isAuthReady = ref(false);
 
     // Vue 的響應式數據容器，用於儲存 Firestore 同步的資料
-    // 注意：這裡必須在 Vue 實例外部定義，因為 onSnapshot 需要在 Vue 之外啟動
-    const itineraryEvents = []; 
-    const expenses = [];
-    const userId = Vue.ref(null);
-    const isAuthReady = Vue.ref(false);
-
-    // 匯率常數
-    const EXCHANGE_RATE_JPY_TWD = 0.202;
+    const itineraryEvents = reactive([]); 
+    const expenses = reactive([]);        
 
     async function initializeFirebase() {
         try {
-            // 由於已在上方用傳統方式初始化，這裡主要是處理登入邏輯
-            
-            // 設置身份驗證狀態監聽 (傳統寫法)
-            auth.onAuthStateChanged((user) => {
+            // --- 步驟 3 & 4. 使用嵌入的配置物件 ---
+            const firebaseConfig = MY_FIREBASE_CONFIG;
+            appId = firebaseConfig.projectId; // 在沒有 __app_id 時，使用 projectId 作為協作 ID 的一部分
+
+            if (!firebaseConfig.apiKey) {
+                console.error("Firebase configuration is incomplete. Missing apiKey.");
+                return;
+            }
+
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+
+            // 設置身份驗證狀態監聽
+            onAuthStateChanged(auth, (user) => {
                 if (user) {
-                    userId.
+                    userId.value = user.uid;
+                } else {
+                    // 匿名或未驗證的用戶使用隨機 ID
+                    userId.value = 'anon_' + crypto.randomUUID().substring(0, 8); 
+                }
+                isAuthReady.value = true;
+            });
+
+            // 登入：在 GitHub Pages 環境下，沒有 __initial_auth_token，直接使用匿名登入
+            await signInAnonymously(auth);
+
+        } catch (error) {
+            console.error("Firebase initialization failed:", error);
+            isAuthReady.value = true; 
+        }
+    }
+    
+    // --- 數據同步監聽 ---
+    watch(isAuthReady, (ready) => {
+        // IMPORTANT: Check for db and appId availability
+        if (!ready || !db || !appId) return;
+
+        // 1. 行程表監聽 (公共資料集)
+        // 使用 projectId 作為 app_id 模擬協作空間
+        const itineraryCollectionPath = `artifacts/${appId}/public/data/itinerary-events`;
+        const itineraryQuery = query(collection(db, itineraryCollectionPath));
+
+        onSnapshot(itineraryQuery, (snapshot) => {
+            // 清空舊數據並載入新數據
+            itineraryEvents.splice(0, itineraryEvents.length); 
+            snapshot.forEach((doc) => {
+                const data = doc.data();
+                itineraryEvents.push({ 
+                    id: doc.id, 
+                    day: parseInt(data.day), 
+                    time: data.time || '00:00',
+                    location: data.location || '',
+                    details: data.details || '',
+                    authorId: data.authorId || 'unknown'
+                });
+            });
+        }, (error) => {
+            console.error("Error synchronizing itinerary:", error);
+        });
+
+        // 2. 分帳紀錄監聽 (公共資料集)
+        const expensesCollectionPath = `artifacts/${appId}/public/data/expense-records`;
+        const expensesQuery = query(collection(db, expensesCollectionPath));
+
+        onSnapshot(expensesQuery, (snapshot) => {
+            expenses.splice(0, expenses.length); 
+            snapshot.forEach((doc) => {
+                expenses.push({ id: doc.id, ...doc.data() });
+            });
+        }, (error) => {
+            console.error("Error synchronizing expenses:", error);
+        });
+    }, { immediate: true });
+
+
+    // --- Vue 應用程式 ---
+    createApp({
+        setup() {
+            // --- 狀態管理 ---
+            const activeTab = ref('itinerary');
+            const selectedDay = ref(1); 
+            
+            // 行程表表單
+            const newEvent = reactive({ day: 1, time: '10:00', location: '', details: '' });
+
+            // 分帳系統狀態
+            const memberInput = ref('小明, 小華, 小美'); 
+            const members = computed(() => memberInput.value.split(',').map(m => m.trim()).filter(m => m.length > 0));
+            const newExpense = reactive({ 
+                description: '', 
+                payer: '', 
+                amountForeign: null, 
+                currency: 'JPY', 
+                participants: [] 
+            });
+
+            // --- 行程表相關邏輯 ---
+            const itineraryGroups = computed(() => {
+                const groups = {};
+                // 按天數分組
+                itineraryEvents.forEach(event => {
+                    const day = event.day;
+                    if (day && day > 0) {
+                        if (!groups[day]) {
+                            groups[day] = { day: day, events: [] }; 
+                        }
+                        groups[day].events.push(event);
+                    }
+                });
+
+                // 按時間排序
+                for (const day in groups) {
+                    groups[day].events.sort((a, b) => a.time.localeCompare(b.time));
+                }
+
+                // 轉換為排序後的陣列
+                return Object.values(groups).sort((a, b) => a.day - b.day);
+            });
+
+            const uniqueDays = computed(() => {
+                return itineraryGroups.value.map(d => d.day);
+            })
+
+            const filteredItineraryGroups = computed(() => {
+                if (selectedDay.value === null || !uniqueDays.value.includes(selectedDay.value)) {
+                    return itineraryGroups.value; 
+                }
+                return itineraryGroups.value.filter(d => d.day === selectedDay.value);
+            })
+
+            function getAuthorInitial(authorId) {
+                // 顯示作者 ID 的前 8 個字元
+                return authorId ? `由 ${authorId.slice(0, 8)} 編輯` : '未知用戶';
+            }
+
+            async function addEvent() {
+                if (!newEvent.day || !newEvent.time || !newEvent.location) {
+                    // 使用模擬的 alert
+                    alert(document.querySelector("#app") ? "請填寫日期、時間和地點！" : '請填寫日期、時間和地點！'); 
+                    return;
+                }
+                const dayAsInt = parseInt(newEvent.day);
+                if (isNaN(dayAsInt) || dayAsInt <= 0) {
+                    console.error('日期必須是有效的正整數');
+                    return;
+                }
+                
+                if (!isAuthReady.value || !db || !appId) return;
+
+                try {
+                    const collectionRef = collection(db, `artifacts/${appId}/public/data/itinerary-events`);
+                    
+                    await addDoc(collectionRef, {
+                        day: dayAsInt,
+                        time: newEvent.time,
+                        location: newEvent.location,
+                        details: newEvent.details,
+                        authorId: userId.value,
+                        createdAt: new Date().toISOString() 
+                    });
+
+                    // 重設表單
+                    newEvent.time = '10:00';
+                    newEvent.location = '';
+                    newEvent.details = '';
+                    selectedDay.value = dayAsInt; 
+                    
+                } catch (e) {
+                    console.error("Error adding document to Firestore: ", e);
+                }
+            }
+
+            async function deleteEvent(eventId) {
+                if (!db || !appId) return;
+                    try {
+                        const docRef = doc(db, `artifacts/${appId}/public/data/itinerary-events`, eventId);
+                        await deleteDoc(docRef);
+                    } catch (e) {
+                        console.error("Error deleting document: ", e);
+                    }
+            }
+
+            // --- 分帳系統相關邏輯 ---
+            const calculatedAmountTWD = computed(() => {
+                if (newExpense.amountForeign > 0 && newExpense.currency === 'JPY') {
+                    // 四捨五入到最近的台幣整數
+                    return Math.round(newExpense.amountForeign * EXCHANGE_RATE_JPY_TWD);
+                }
+                return 0;
+            })
+
+            async function addExpense() {
+                if (!newExpense.description || !newExpense.payer || newExpense.amountForeign <= 0 || newExpense.participants.length === 0) {
+                    // 使用模擬的 alert
+                    alert(document.querySelector("#app") ? "請確保所有分帳欄位都已正確填寫！" : '請確保所有分帳欄位都已正確填寫！'); 
+                    return;
+                }
+                if (!isAuthReady.value || !db || !appId) return;
+
+                try {
+                    const collectionRef = collection(db, `artifacts/${appId}/public/data/expense-records`);
+                    
+                    await addDoc(collectionRef, {
+                        description: newExpense.description,
+                        payer: newExpense.payer,
+                        amount: calculatedAmountTWD.value, // TWD amount for settlement
+                        amountForeign: newExpense.amountForeign, 
+                        currency: newExpense.currency,
+                        participants: newExpense.participants.slice(),
+                        authorId: userId.value,
+                        createdAt: new Date().toISOString()
+                    });
+
+                    // 重設表單
+                    newExpense.description = '';
+                    newExpense.payer = '';
+                    newExpense.amountForeign = null;
+                    newExpense.participants = [];
+                } catch (e) {
+                    console.error("Error adding expense to Firestore: ", e);
+                }
+            }
+
+            async function deleteExpense(expenseId) {
+                 if (!db || !appId) return;
+                    try {
+                        const docRef = doc(db, `artifacts/${appId}/public/data/expense-records`, expenseId);
+                        await deleteDoc(docRef);
+                    } catch (e) {
+                        console.error("Error deleting expense: ", e);
+                    }
+            }
+
+            const settlements = computed(() => {
+                // 結算邏輯
+                if (members.value.length === 0 || expenses.length === 0) {
+                    return [];
+                }
+
+                const netBalances = {};
+                members.value.forEach(m => netBalances[m] = 0);
+
+                // 1. 計算淨餘額
+                expenses.forEach(expense => {
+                    if (expense.participants && expense.participants.length > 0) {
+                        const share = expense.amount / expense.participants.length; 
+                        // 付款人得到全部金額
+                        netBalances[expense.payer] = (netBalances[expense.payer] || 0) + expense.amount;
+                        // 參與者支付分攤金額
+                        expense.participants.forEach(p => {
+                            netBalances[p] = (netBalances[p] || 0) - share;
+                        });
+                    }
+                });
+                
+                let creditors = []; // 被欠錢 (> 0)
+                let debtors = [];   // 欠別人錢 (< 0)
+
+                // 2. 分離債權人和債務人
+                for (const member in netBalances) {
+                    const balance = netBalances[member];
+                    if (Math.abs(balance) > 0.5) { // 忽略微小餘額
+                        const item = { name: member, amount: Math.round(Math.abs(balance)) }; 
+                        if (balance > 0) {
+                            creditors.push(item);
+                        } else {
+                            debtors.push(item);
+                        }
+                    }
+                }
+                
+                // 3. 簡化結算 (Simple Settlement Algorithm)
+                let settlements = [];
+                let i = 0; // Debtors pointer
+                let j = 0; // Creditors pointer
+
+                while (i < debtors.length && j < creditors.length) {
+                    let debtor = debtors[i];
+                    let creditor = creditors[j];
+                    
+                    const amountToSettle = Math.min(debtor.amount, creditor.amount);
+
+                    if (amountToSettle > 0) {
+                        settlements.push({
+                            from: debtor.name,
+                            to: creditor.name,
+                            amount: amountToSettle 
+                        });
+
+                        debtor.amount -= amountToSettle;
+                        creditor.amount -= amountToSettle;
+                    }
+
+                    if (debtor.amount < 0.5) { i++; }
+                    if (creditor.amount < 0.5) { j++; }
+                }
+
+                return settlements;
+            })
+
+            // --- 地圖與導航相關邏輯 ---
+            const currentDayEvents = computed(() => {
+                 return itineraryEvents.filter(e => e.day === selectedDay.value);
+            });
+
+            const currentDayLocations = computed(() => {
+                // 取得選定日期的唯一地點名稱
+                const locations = currentDayEvents.value.map(e => e.location).filter(l => l.trim().length > 0);
+                return [...new Set(locations)];
+            });
+
+            const multiPointMapUrl = computed(() => {
+                const locations = currentDayLocations.value;
+                // Google Maps 嵌入 API 僅支援單點或方向，多點顯示用查詢字串模擬
+                if (locations.length === 0) {
+                    // 預設為東京車站
+                    return "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3240.828030380844!2d139.7641324152589!3d35.68123618019349!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x60188b901e18d363%3A0x7d288d011f054700!2z5p2x5Lqs6aeF6aeT!5e0!3m2!1szh-TW!2stw!4v1678848000000!5m2!1szh-TW!2stw";
+                }
+
+                // 組合地點名稱進行 Google Maps 查詢，強制帶入東京
+                const locationString = locations.join(' and ') + ', Tokyo';
+                // 使用 place 查詢並將結果嵌入
+                // 注意: 這裡需要您自己的 Google Maps API Key 才能正常運作，但為了安全性，我不會在程式碼中硬編碼。
+                // 由於沒有 API Key，這個 URL 可能在某些環境下無法顯示地圖，但邏輯是正確的。
+                return `https://www.google.com/maps/embed/v1/place?key=&q=${encodeURIComponent(locationString)}`;
+            });
+
+            // --- 初始化與監聽 ---
+
+            // 當行程表數據改變時，自動選擇第一個或現有的一天
+            watch(itineraryEvents, (newEvents) => {
+                if (newEvents.length > 0) {
+                    const firstDay = Math.min(...newEvents.map(e => e.day));
+                    if (selectedDay.value === null || !uniqueDays.value.includes(selectedDay.value)) {
+                        selectedDay.value = firstDay;
+                    }
+                } else {
+                    selectedDay.value = 1;
+                }
+                // 確保 icons 在 DOM 更新後被渲染
+                nextTick(() => { lucide.createIcons(); });
+            }, { immediate: true });
+
+            // 確保每次切換 Tab 時 icons 都被渲染
+            watch(activeTab, async () => {
+                await nextTick();
+                lucide.createIcons();
+            }, { immediate: true });
+
+            // 執行 Firebase 初始化
+            initializeFirebase();
+
+            return {
+                EXCHANGE_RATE_JPY_TWD,
+                activeTab,
+                isAuthReady,
+                userId,
+                
+                // 行程
+                itineraryEvents, 
+                itineraryGroups, 
+                newEvent,
+                addEvent,
+                deleteEvent,
+                uniqueDays,
+                selectedDay,
+                filteredItineraryGroups,
+                getAuthorInitial,
+                
+                // 分帳
+                memberInput,
+                members,
+                expenses, 
+                newExpense,
+                addExpense,
+                deleteExpense,
+                calculatedAmountTWD, 
+                settlements,
+
+                // 地圖
+                currentDayLocations,
+                multiPointMapUrl
+            }
+        }
+    }).mount('#app')
+</script>
+
+</body>
+</html>
